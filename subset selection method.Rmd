@@ -159,7 +159,7 @@ for ( j in seq(k)){
     cv.errors[j,i]= mean((Hitters$Salary[folds==j]-pred)^2)
     
   }
-}
+} 
 
 mean.cv.errors <-apply(cv.errors,2,mean)
 mean.cv.errors
