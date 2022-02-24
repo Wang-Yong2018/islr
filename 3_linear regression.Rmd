@@ -1,0 +1,24 @@
+---
+title: "3 Linear Regression"
+author: "WangYong"
+date: "2022/2/24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(MASS)
+library(tidymodels)
+```
+
+## 3.2 Simple linear regression
+
+```{r}
+lm_spec <- linear_reg() %>%
+  set_mode("regression") %>%
+  set_engine('lm')
+lm_fit <- lm_spec %>%
+  fit(medv~lstat, data=Boston)
+lm_fit
+```
+
