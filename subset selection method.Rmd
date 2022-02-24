@@ -1,0 +1,179 @@
+---
+title: "6.5 Subset Selection Methods"
+author: "WangYong"
+date: "2022/2/24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ISLR)
+library(leaps)
+```
+
+# 6.5.1 Best Subset Selection
+
+Use hitters data
+```{r}
+print('Exploratory Dataset Hitters')
+print('show predictors')
+names(Hitters)
+print('show dimensions' )
+dim(Hitters)
+print('Show NA value in Hitter$Salary variable')
+table(is.na(Hitters$Salary))
+```
+remove salaray is NA rows.
+```{r}
+Hitters <- na.omit(Hitters)
+dim(Hitters)
+print('There is no NA salrary rows')
+table(is.na(Hitters))
+```
+Using leaps library regsubsets function to find best variables
+```{r}
+library(leaps)
+regfit.full = regsubsets(data=Hitters,Salary~.)
+reg.summary<-summary(regfit.full)
+reg.summary
+reg.summary$rsq
+```
+
+
+plotting Rss, adjr2 and max point
+```{r}
+set.seed(1)
+regfit.full = regsubsets(data=Hitters,Salary~.,nvmax=19)
+reg.summary<-summary(regfit.full)
+par(mfrow=c(1,2))
+plot(reg.summary$rss,
+     xlab='Number of Variables',
+     ylab='RSS',
+     type='l')
+plot(reg.summary$adjr2,
+     xlab="Number of Variables",
+     ylab='Adjusted Rsq',
+     type="l"
+     )
+max_point<- which.max(reg.summary$adjr2)
+points (max_point,reg.summary$adjr2[11], col="red",cex=2,pch =20)
+```
+
+plot Cp, and BIC statistics and min point
+```{r}
+set.seed(1)
+regfit.full = regsubsets(data=Hitters,Salary~.,nvmax=19)
+reg.summary<-summary(regfit.full)
+min_cp <- which.min(reg.summary$cp)
+min_bic <- which.min(reg.summary$bic)
+par(mfrow=c(1,2))
+plot(reg.summary$cp,
+     xlab='Number of Variables',
+     ylab='Cp',
+     type='l')
+points (min_cp,reg.summary$cp[min_cp], col="red",cex=2,pch =20)
+plot(reg.summary$bic,
+     xlab="Number of Variables",
+     ylab='BIC',
+     type="l"
+     )
+points (min_bic,reg.summary$bic[min_bic],col="red",cex=2,pch =20)
+```
+
+Use regsubsets default plots
+```{r}
+plot(regfit.full, scale='r2')
+plot(regfit.full, scale='adjr2')
+plot(regfit.full, scale='Cp')
+plot(regfit.full, scale='bic')
+```
+
+Get lowest BIC & related variables #6
+according to above plot, we can get best performance variable.
+in following way: 1.get id the the variable groups. 2. show the variable names
+
+```{r}
+# get lowest bic group id
+best_bic_id <- which.min(reg.summary$bic)
+# show coefficients
+coef(regfit.full,6)
+# show the variable names
+names(coef(regfit.full,6))[-1]
+```
+
+# 6.5.2 step forward and back forward
+NA
+
+# 6.5.3Choosing Among Models Using the Validation Set
+Approach and Cross-Validation
+in order to get test error, we need train only in train observation
+```{r}
+set.seed(1)
+nvmax <- 19
+train <- sample(c(T,F),nrow(Hitters),replace = T)
+test <-(!train)
+
+regfit.best <- regsubsets(Salary~.,
+                          data=Hitters[train,],
+                          nvmax=nvmax)
+test.mat <- model.matrix(Salary~., data=Hitters[test,])
+val.errors =rep(NA ,nvmax)
+for (i in seq(nvmax)){
+  coefi = coef(regfit.best, id=i)
+  pred = test.mat[,names(coefi)]%*% coefi
+  val.errors[i] = mean((Hitters$Salary[test]-pred)^2)
+}
+val.errors
+```
+
+Finally train on full data and get best model
+This time, 10 variable found is best group which is differnet than partial date.
+
+```{r}
+predict.regsubsets <- function(object,newdata, id){
+ form <- as.formula(object$call[[2]])
+ mat  <- model.matrix(form ,newdata)
+ coefi<- coef(object, id=id)
+ xvars<- names(coefi)
+ mat[,xvars] %*% coefi
+}
+
+regfit.best <- regsubsets(Salary~.,data=Hitters, nvmax=nvmax)
+coef(regfit.best, 10)
+```
+ 
+now let's cross validation by 10 folder
+```{r}
+k=10
+set.seed(1)
+folds = sample(1:k, nrow(Hitters),replace=T)
+# cv.error is 10*19 matrix with NA value. it will be filled later
+cv.errors = matrix(NA, k,19, dimnames=list(NULL, paste(1:nvmax)))
+for ( j in seq(k)){
+  best.fit <- regsubsets(Salary~.,
+                         data=Hitters[folds!=j,],
+                         nvmax=nvmax)
+  for (i in seq(nvmax)){
+    pred = predict(best.fit, Hitters[folds==j,],id=i)
+    
+    cv.errors[j,i]= mean((Hitters$Salary[folds==j]-pred)^2)
+    
+  }
+}
+
+mean.cv.errors <-apply(cv.errors,2,mean)
+mean.cv.errors
+
+```
+
+ plot the results
+```{r}
+par(mfrow=c(1,1))
+plot(mean.cv.errors,type='b')
+```
+show the best group variables
+```{r}
+reg.best=regsubsets (Salary~.,data=Hitters , nvmax=19)
+coef(reg.best,11)
+
+```
