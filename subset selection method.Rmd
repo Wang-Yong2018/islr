@@ -177,3 +177,122 @@ reg.best=regsubsets (Salary~.,data=Hitters , nvmax=19)
 coef(reg.best,11)
 
 ```
+### 6.6 Lab 2: Ridge Regression and the Lasso
+```{r}
+x <- model.matrix(Salary~., Hitters)[,-1]
+y <- Hitters$Salary
+````
+### 6.6.1 Ridge Regression(compare big and small lambda)
+- big lambda  11498
+````{r}
+library(glmnet)
+grid <- 10^ seq(10,-2, length=100)
+ridge.mod <- glmnet(x,y, alpha=0, lambda=grid)
+dim(coef(ridge.mod))
+ridge.mod$lambda[50]
+coef(ridge,mod)[,50]
+sqrt(sum(coef(ridge.mod)[-1,50]^2))
+```
+
+- small lambda 705
+```{r}
+ridge.mod$lambda[60]
+coef(ridge.mod)[,60]
+
+sqrt(sum(coef(ridge.mod)[-1,60]^2))
+
+```
+
+- small lambda 50
+```{r}
+options(digits = 3)
+predict(ridge.mod, s=50, type='coefficients')[1:20,]
+
+```
+
+- lambda =4 
+```{r}
+set.seed(1)
+train=sample(1:nrow(x),nrow(x)/2)
+test=(-train)
+y.test=y[test]
+
+ridge.mod <- glmnet(x[train,],y[train], 
+                    alpha=0, lambda=grid, 
+                    thresh=1e-12)
+ridge.pred <- predict(ridge.mod, s=4, newx=x[test,]) #lambda =4
+mean((ridge.pred-y.test)^2) # pred - test
+mean((mean(y[train])-y.test)^2) # mean(train.y) - y.test
+
+```
+lambda = 0 
+```{r}
+ridge.pred <- predict(ridge.mod,s=0, newx=x[test,])
+mean((ridge.pred-y.test)^2)
+lm(y~x, subset=train)
+predict(ridge.mod, s=0,type='coefficients')[1:20]
+```
+- cross validation by glmnet
+```{r}
+set.seed(1)
+cv.out <- cv.glmnet(x[train,],y[train],alpha=0)
+plot(cv.out)
+```
+
+# use best lambda to predict
+```{r}
+bestlam = cv.out$lambda.min  # Using cv.glmnet to find best lambda value
+bestlam # it is 212
+
+rigde.pred <- predict(ridge.mod, s=bestlam, newx=x[test,])
+mean((ridge.pred-y.test)^2)
+```
+
+fill full dataset
+```{r}
+out <- glmnet(x,y,alpha=0)
+predict(out, type='coefficients', s=bestlam)[1:20,]
+```
+As expected, none of coefficients are zero. Ridge regression does not perform variable selection!
+
+### The Lasso
+```{r}
+lasso.mod <- glmnet(x[train,], y[train], alpha=1, lambda=grid)
+plot(lasso.mod)
+```
+
+check test error by cross validationi
+```{r}
+set.seed(1)
+cv.out <- cv.glmnet(x[train,], y[train], alpha =1)
+plot(cv.out)
+
+bestlam <-cv.out$lambda.min
+lasso.pred <- predict(lasso.mod, s=bestlam, newx=x[test,])
+mean((lasso.pred - y.test)^2)
+```
+
+Lasso test error similar to best lambda result of Ridge. But the most advantage function is feature selection by resulting coefficient estimates
+are sparse. Here we can see 12 of 19 coefficient estimation are exactly zero. So, there are only 7 variable contains Lasso with lambda chosen by cross validation.
+
+```{r}
+out <- glmnet(x, y , alpha =1, lambda=grid)
+lasso.coef <- predict(out, type= 'coefficients', s= bestlam)[1:20,]
+lasso.coef
+
+```
+Below code show if do lass continouslly, the result is wired.
+```{r}
+set.seed(1)
+tmp_names <- names(lasso.coef[lasso.coef>0])[-1]
+cv.out <- cv.glmnet(x[train,tmp_names], y[train], alpha =1)
+
+lasso.mod <- glmnet(x[train,tmp_names], y[train], alpha=1, lambda=grid)
+bestlam <-cv.out$lambda.min
+lasso.pred <- predict(lasso.mod, s=bestlam, newx=x[test,tmp_names])
+
+mean((lasso.pred - y.test)^2)
+lasso.coef <- predict(out, type= 'coefficients', s= bestlam)[1:20,]
+lasso.coef
+```
+
