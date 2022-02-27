@@ -1,0 +1,81 @@
+---
+title: '7.8 Lab: Non-Linear Modeling'
+author: "WangYong"
+date: "2022/2/25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ISLR)
+attach(Wage)
+```
+### 7.8.1 Polynomial Regression and Setup Functions
+thogonal polynomials.
+```{r}
+fit <- lm(wage~poly(age, 4),data=Wage)
+coef(summary(fit))
+```
+direct  (3种方式，自动、手工，cbind)
+```{r}
+fit2 <- lm(wage~poly(age,4,raw=T),data=Wage)
+coef(summary(fit2))
+
+fit2a <-lm(wage~age+I(age^2)+I(age^3)+I(age^4),data=Wage)
+coef(fit2a)
+fit2b=lm(wage~cbind(age ,age^2,age^3, age ^4),data=Wage)
+coef(fit2b)
+ 
+```
+
+```{r}
+agelims = range(age)
+age.grid <- seq(from=agelims[1],to=agelims[2])
+preds = predict(fit, newdata=list(age=age.grid),se=T)
+se.bands = cbind(preds$fit + 2* preds$se.fit, preds$fit-2*preds$se.fit)
+par(mfrow=c(1,2),mar=c(4.5,4.5,1,1),oma=c(0,0,4,0))
+plot(age, wage, xlim=agelims, cex=.5, col='darkgrey')
+title('Degress-4 Polynomial', outer=T)
+lines(age.grid, preds$fit, lwd=2, col='blue')
+matlines(age.grid, se.bands, lwd=1, col='blue',lty=3)
+
+```
+- compare the results of whether or not orthogonal set
+note: the result is tini for our case.
+```{r}
+preds2 = predict(fit2, newdata=list(age=age.grid),se=T)
+max(abs(preds$fit - preds2$fit))
+```
+- compare different polynomial level by anova
+```{r}
+fit.1=lm(wage~age ,data=Wage)
+fit.2=lm(wage~poly(age ,2),data=Wage)
+fit.3=lm(wage~poly(age ,3),data=Wage)
+fit.4=lm(wage~poly(age ,4),data=Wage)
+fit.5=lm(wage~poly(age ,5),data=Wage)
+anova(fit.1,fit.2,fit.3,fit.4,fit.5)
+```
+
+By anova compare, we can find level3,or 4 is sufficient. level5 has no 
+significant improve from Pvalue
+
+The result is same when check coef from fit.5 directly. The pvalue is same as 
+anova result. Note: level 5 include level 1,2,3,4 coefficients as well.
+
+```{r}
+coef(summary (fit.5))
+# for example level to tvalue -11.983^2 is 154 which in anova test fit.2 F value
+(-11.983)^2
+```
+
+- use anova to compare different type models
+the models 3 is better when compare the pvalue
+```{r}
+fit.1=lm(wage~education +age ,data=Wage)
+fit.2=lm(wage~education +poly(age ,2) ,data=Wage)
+fit.3=lm(wage~education +poly(age ,3) ,data=Wage)
+anova(fit.1,fit.2,fit.3)
+```
+## spline funtion
+## GAM
+

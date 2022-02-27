@@ -1,0 +1,18 @@
+---
+title: '7.8 Lab: Non-Linear Modeling'
+author: "WangYong"
+date: "2022/2/25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ISLR)
+attach(Wage)
+```
+### 7.8.1 Polynomial Regression and Setup Functions
+
+```{r}
+fit <- lm(wage~poly(wage, 4),data=wage)
+coef(summary(fit))
+```
